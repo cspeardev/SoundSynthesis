@@ -10,7 +10,7 @@ namespace BasicSynthesizerProject
     {
         public Oscillator()
         {
-            Point buttonPoint = new Point(10,15);
+            Point buttonPoint = new(10,15);
             this.Controls.Add(new Button()
             {
                 Name = "Sine",
