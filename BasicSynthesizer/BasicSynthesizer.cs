@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Media;
 using System.IO;
+using BasicSynthesizer;
 
 namespace BasicSynthesizerProject
 {
@@ -27,9 +28,7 @@ namespace BasicSynthesizerProject
         public BasicSynthesizer()
         {
             InitializeComponent();
-
-            var TestDictionary = new Dictionary<string, Func<WaveForm,float,short[]>>();
-            TestDictionary.Add("hmm", GenerateWave);
+            
         }
 
         private void BasicSynthesizer_KeyDown(object sender, KeyEventArgs e)
@@ -43,6 +42,9 @@ namespace BasicSynthesizerProject
             {
                 return;
             }
+
+
+
             GenerateSound(frequency);
         }
 
@@ -51,7 +53,7 @@ namespace BasicSynthesizerProject
         private const short BITS_PER_SAMPLE = 16;
 
         /// <summary>
-        /// 
+        /// Creates a WAVE format stream, based on documentation found here: http://soundfile.sapp.org/doc/WaveFormat/
         /// </summary>
         /// <param name="binaryWave"></param>
         /// <param name="writer"></param>
@@ -88,69 +90,83 @@ namespace BasicSynthesizerProject
             const int subChunkTwoSize = SAMPLE_RATE * 1 * BlockAlign;
             const int subChunkOneSize = 16;
 
-            foreach (Oscillator o in Controls.OfType<Oscillator>())
-            {
-                wave = GenerateWave(o.WaveForm, frequency);
-            }
+            List<Oscillation> oscillations = new();
 
+            foreach(Oscillator o in Controls.OfType<Oscillator>().Where(o => o.ON))
+            {
+                oscillations.Add(new Oscillation()
+                {
+                    WaveForm = o.WaveForm,
+                    Volume = (Convert.ToDouble(o.Volume))/100,
+                    Frequency = frequency
+                }) ;
+            }
+            wave = GenerateWave(oscillations);
             Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
             PlaySound(binaryWave, BlockAlign, subChunkTwoSize, subChunkOneSize);
         }
 
-        private short[] GenerateWave(WaveForm Wave, float frequency)
+        private short[] GenerateWave(IEnumerable<Oscillation> oscillations)
         {
             short[] wave = new short[SAMPLE_RATE];
-            int samplesPerWaveLength = (int)(SAMPLE_RATE / frequency);
-            short ampStep = (short)((short.MaxValue * 2) / samplesPerWaveLength);
             short tempSample;
+            int waveCount = oscillations.Count();
             Random random = new Random();
-            switch (Wave)
+            foreach(Oscillation o in oscillations)
             {
-                case WaveForm.Sine:
-                    for (int i = 0; i < SAMPLE_RATE; i++)
-                    {
-                        wave[i] = Convert.ToInt16(short.MaxValue * Math.Sin(((Math.PI * 2 * frequency) / SAMPLE_RATE) * i));
-                    }
-                    break;
-                case WaveForm.Square:
-                    for (int i = 0; i < SAMPLE_RATE; i++)
-                    {
-                        wave[i] = Convert.ToInt16(short.MaxValue * Math.Sign(Math.Sin((Math.PI * 2 * frequency) / SAMPLE_RATE * i)));
-                    }
-                    break;
-                case WaveForm.Saw:
-                    for (int i = 0; i < SAMPLE_RATE; i++)
-                    {
+                int samplesPerWaveLength = (int)(SAMPLE_RATE / o.Frequency);
+                short ampStep = (short)((short.MaxValue * 2) / samplesPerWaveLength);
+
+                switch (o.WaveForm)
+                {
+                    case WaveForm.Sine:
+                        for (int i = 0; i < SAMPLE_RATE; i++)
+                        {
+                            wave[i] += Convert.ToInt16(short.MaxValue * Math.Sin(Math.PI * 2 * o.Frequency / SAMPLE_RATE * i) / waveCount * o.Volume);
+                        }
+                        break;
+                    case WaveForm.Square:
+                        for (int i = 0; i < SAMPLE_RATE; i++)
+                        {
+                            wave[i] += Convert.ToInt16((short.MaxValue * Math.Sign(Math.Sin((Math.PI * 2 * o.Frequency) / SAMPLE_RATE * i))) / waveCount * o.Volume);
+                        }
+                        break;
+                    case WaveForm.Saw:
+                        for (int i = 0; i < SAMPLE_RATE; i++)
+                        {
+                            tempSample = -short.MaxValue;
+                            for (int j = 0; j < samplesPerWaveLength && i < SAMPLE_RATE; j++)
+                            {
+                                tempSample += ampStep;
+                                wave[i++] += Convert.ToInt16(tempSample / waveCount * o.Volume);
+                            }
+                            i--;
+                        }
+                        break;
+                    case WaveForm.Triangle:
                         tempSample = -short.MaxValue;
-                        for (int j = 0; j < samplesPerWaveLength && i < SAMPLE_RATE; j++)
+                        for (int i = 0; i < SAMPLE_RATE; i++)
                         {
+                            if (Math.Abs(tempSample + ampStep) > short.MaxValue)
+                            {
+                                ampStep = (short)-ampStep;
+                            }
                             tempSample += ampStep;
-                            wave[i++] = Convert.ToInt16(tempSample);
+                            wave[i] += Convert.ToInt16(tempSample / waveCount * o.Volume);
                         }
-                        i--;
-                    }
-                    break;
-                case WaveForm.Triangle:
-                    tempSample = -short.MaxValue;
-                    for (int i = 0; i < SAMPLE_RATE; i++)
-                    {
-                        if (Math.Abs(tempSample + ampStep) > short.MaxValue)
+                        break;
+                    case WaveForm.Noise:
+                        for (int i = 0; i < SAMPLE_RATE; i++)
                         {
-                            ampStep = (short)-ampStep;
+                            wave[i] += Convert.ToInt16(random.Next(-short.MaxValue, short.MaxValue) / waveCount * o.Volume);
                         }
-                        tempSample += ampStep;
-                        wave[i] = Convert.ToInt16(tempSample);
-                    }
-                    break;
-                case WaveForm.Noise:
-                    for (int i = 0; i < SAMPLE_RATE; i++)
-                    {
-                        wave[i] = (short)random.Next(-short.MaxValue, short.MaxValue);
-                    }
-                    break;
-                default:
-                    throw new Exception();
+                        break;
+                    default:
+                        throw new Exception();
+                }
+
             }
+            
             return wave;
         }
 
@@ -168,7 +184,10 @@ namespace BasicSynthesizerProject
             CreateWavStream(binaryWave, writer, BlockAlign, subChunkTwoSize, subChunkOneSize);
             stream.Position = 0;
             SoundPlayer player = new(stream);
+
             player.Play();
         }
+
+
     }
 }

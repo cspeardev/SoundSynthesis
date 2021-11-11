@@ -10,6 +10,7 @@ namespace BasicSynthesizerProject
     {
         public Oscillator()
         {
+            this.Size = new Size(300, 100);
             Point buttonPoint = new Point(10,15);
             this.Controls.Add(new Button()
             {
@@ -53,7 +54,29 @@ namespace BasicSynthesizerProject
                 c.Font = new Font("Microsoft Sans Serif", 6.75f);
                 c.Click += WaveButton_Click;
             }
+            this.Controls.Add(new CheckBox()
+            {
+                Name = "OscillatorOn",
+                Location = new Point(190, 10),
+                Size = new Size(60,30),
+                Text = "On",
+                Checked = true
+            });
+
+            this.Controls.Add(new TrackBar()
+            {
+                Name = "Volume",
+                Text = "Volume",
+                Maximum = 100,
+                Minimum = 0,
+                Value = 100,
+                Location = new Point(190, 50)
+            }); 
         }
+
+        public bool ON => ((CheckBox)this.Controls["OscillatorOn"]).Checked;
+        public int Volume => ((TrackBar)this.Controls["Volume"]).Value;
+
 
         private void WaveButton_Click(object sender, EventArgs e)
         {
