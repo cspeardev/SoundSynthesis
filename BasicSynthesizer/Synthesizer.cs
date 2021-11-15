@@ -11,6 +11,9 @@ namespace BasicSynthesizerProject
     {
         private const int SAMPLE_RATE = 44100;
         private const short BITS_PER_SAMPLE = 16;
+        private const short BlockAlign = BITS_PER_SAMPLE / 8;
+        private const int subChunkTwoSize = SAMPLE_RATE * 1 * BlockAlign;
+        private const int subChunkOneSize = 16;
 
         private SoundPlayer player;
 
@@ -143,9 +146,6 @@ namespace BasicSynthesizerProject
         {
             short[] wave = null;
             byte[] binaryWave = new byte[SAMPLE_RATE * sizeof(short)];
-            const short BlockAlign = BITS_PER_SAMPLE / 8;
-            const int subChunkTwoSize = SAMPLE_RATE * 1 * BlockAlign;
-            const int subChunkOneSize = 16;
 
             wave = GenerateWave(oscillations);
             Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
