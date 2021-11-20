@@ -108,13 +108,13 @@ namespace BasicSynthesizerProject
         /// <param name="BlockAlign"></param>
         /// <param name="subChunkTwoSize"></param>
         /// <param name="subChunkOneSize"></param>
-        private void PlaySound(byte[] binaryWave, short BlockAlign, int subChunkTwoSize, int subChunkOneSize)
+        private void PlaySound(byte[] binaryWave)
         {
             using MemoryStream stream = new();
             using BinaryWriter writer = new(stream);
 
 
-            CreateWavStream(writer, BlockAlign, subChunkTwoSize, subChunkOneSize);
+            CreateWavStream(writer);
             writer.Write(binaryWave);
 
             stream.Position = 0;
@@ -129,18 +129,18 @@ namespace BasicSynthesizerProject
         /// <param name="BlockAlign"></param>
         /// <param name="subChunkTwoSize"></param>
         /// <param name="subChunkOneSize"></param>
-        private void CreateWavStream( BinaryWriter writer, short BlockAlign, int subChunkTwoSize, int subChunkOneSize)
+        private void CreateWavStream( BinaryWriter writer)
         {
             //ChunkID
             writer.Write("RIFF".ToCharArray());
             //ChunkSize
-            writer.Write(36 + subChunkTwoSize);
+            writer.Write(36 + SUB_CHUNK_TWO_SIZE);
             //Format
             writer.Write("WAVE".ToCharArray());
             //Subchunk1ID
             writer.Write("fmt ".ToCharArray());
             //Subchunk1Size
-            writer.Write(subChunkOneSize);
+            writer.Write(SUB_CHUNK_ONE_SIZE);
             //AudioFormat
             writer.Write((short)1);
             //NumChannels
@@ -148,15 +148,15 @@ namespace BasicSynthesizerProject
             //SampleRate
             writer.Write(SAMPLE_RATE);
             //ByteRate
-            writer.Write(SAMPLE_RATE * BlockAlign);
+            writer.Write(SAMPLE_RATE * BLOCK_ALIGN);
             //BlockAlign
-            writer.Write(BlockAlign);
+            writer.Write(BLOCK_ALIGN);
             //BitsPerSample
             writer.Write(BITS_PER_SAMPLE);
             //SubChunk2ID
             writer.Write("data".ToCharArray());
             //SubChunk2Size
-            writer.Write(subChunkTwoSize);
+            writer.Write(SUB_CHUNK_TWO_SIZE);
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace BasicSynthesizerProject
                 byte[] binaryWave = new byte[SAMPLE_RATE * sizeof(short)];
                 wave = GenerateWave(oscillations, 0);
                 Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
-                PlaySound(binaryWave, BLOCK_ALIGN, SUB_CHUNK_TWO_SIZE, SUB_CHUNK_ONE_SIZE);
+                PlaySound(binaryWave);
             }
         }
     }
