@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Media;
 using System.IO;
-using BasicSynthesizer;
+using SynthesizerProject;
 
 namespace BasicSynthesizerProject
 {

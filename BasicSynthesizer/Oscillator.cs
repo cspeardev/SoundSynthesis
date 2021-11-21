@@ -3,6 +3,7 @@ using System.Drawing;
 using BasicSynthesizerProject;
 using System;
 using System.Linq;
+using SynthesizerProject;
 
 namespace BasicSynthesizerProject
 {

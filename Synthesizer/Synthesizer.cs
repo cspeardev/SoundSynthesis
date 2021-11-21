@@ -1,11 +1,10 @@
-﻿using BasicSynthesizer;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Media;
 
-namespace BasicSynthesizerProject
+namespace SynthesizerProject
 {
     public class Synthesizer
     {
@@ -105,31 +104,26 @@ namespace BasicSynthesizerProject
         /// 
         /// </summary>
         /// <param name="binaryWave"></param>
-        /// <param name="BlockAlign"></param>
-        /// <param name="subChunkTwoSize"></param>
-        /// <param name="subChunkOneSize"></param>
         private void PlaySound(byte[] binaryWave)
         {
             using MemoryStream stream = new();
             using BinaryWriter writer = new(stream);
 
-
+            
             CreateWavStream(writer);
             writer.Write(binaryWave);
 
             stream.Position = 0;
             player.Stream = stream;
+            player.PlaySync();
+            
         }
 
         /// <summary>
         /// Creates a WAVE format stream, based on documentation found here: http://soundfile.sapp.org/doc/WaveFormat/
         /// </summary>
-        /// <param name="binaryWave"></param>
         /// <param name="writer"></param>
-        /// <param name="BlockAlign"></param>
-        /// <param name="subChunkTwoSize"></param>
-        /// <param name="subChunkOneSize"></param>
-        private void CreateWavStream( BinaryWriter writer)
+        private void CreateWavStream(BinaryWriter writer)
         {
             //ChunkID
             writer.Write("RIFF".ToCharArray());
@@ -165,7 +159,7 @@ namespace BasicSynthesizerProject
         /// <param name="frequency"></param>
         public void GenerateSound(IEnumerable<Oscillation> oscillations)
         {
-            if (CurrentSample == null || CurrentSample.SequenceEqual(oscillations))
+            if (CurrentSample == null || !CurrentSample.SequenceEqual(oscillations))
             {
                 CurrentSample = oscillations;
                 short[] wave = null;
