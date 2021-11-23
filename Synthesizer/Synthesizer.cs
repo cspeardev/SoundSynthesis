@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SynthesizerProject
 {
@@ -11,10 +13,10 @@ namespace SynthesizerProject
         private const int SAMPLE_RATE = 44100;
         private const short BITS_PER_SAMPLE = 16;
         private const short BLOCK_ALIGN = BITS_PER_SAMPLE / 8;
-        private const int SUB_CHUNK_TWO_SIZE = SAMPLE_RATE * 1 * BLOCK_ALIGN;
         private const int SUB_CHUNK_ONE_SIZE = 16;
-        private IEnumerable<Oscillation> CurrentSample;
-
+        private List<Oscillation> CurrentOscillations = new();
+        private readonly WaveGenerator Generator;
+        public bool Playing { get; set; }
 
         private SoundPlayer player;
 
@@ -25,110 +27,59 @@ namespace SynthesizerProject
         {
             player = new SoundPlayer();
             player.StreamChanged += Player_StreamChanged;
+            Generator = new(SAMPLE_RATE);
         }
 
         private void Player_StreamChanged(object sender, EventArgs e)
         {
-            player.Play();
+            //player.Play();
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="oscillations"></param>
-        /// <returns></returns>
-        private short[] GenerateWave(IEnumerable<Oscillation> oscillations, int StartTime)
-        {
-            short[] wave = new short[SAMPLE_RATE];
-            short tempSample;
-            int waveCount = oscillations.Count();
-            Random random = new Random();
-            foreach (Oscillation o in oscillations)
-            {
-                int samplesPerWaveLength = (int)(SAMPLE_RATE / o.Frequency);
-                short ampStep = (short)((short.MaxValue * 2) / samplesPerWaveLength);
-
-                switch (o.WaveForm)
-                {
-                    case WaveForm.Sine:
-                        for (int i = 0; i < SAMPLE_RATE; i++)
-                        {
-                            wave[i] += Convert.ToInt16(short.MaxValue * Math.Sin(Math.PI * 2 * o.Frequency / SAMPLE_RATE * (i + StartTime) ) / waveCount * o.Volume);
-                        }
-                        break;
-                    case WaveForm.Square:
-                        for (int i = 0; i < SAMPLE_RATE; i++)
-                        {
-                            wave[i] += Convert.ToInt16((short.MaxValue * Math.Sign(Math.Sin((Math.PI * 2 * o.Frequency) / SAMPLE_RATE * i))) / waveCount * o.Volume);
-                        }
-                        break;
-                    case WaveForm.Saw:
-                        for (int i = 0; i < SAMPLE_RATE; i++)
-                        {
-                            tempSample = -short.MaxValue;
-                            for (int j = 0; j < samplesPerWaveLength && i < SAMPLE_RATE; j++)
-                            {
-                                tempSample += ampStep;
-                                wave[i++] += Convert.ToInt16(tempSample / waveCount * o.Volume);
-                            }
-                            i--;
-                        }
-                        break;
-                    case WaveForm.Triangle:
-                        tempSample = -short.MaxValue;
-                        for (int i = 0; i < SAMPLE_RATE; i++)
-                        {
-                            if (Math.Abs(tempSample + ampStep) > short.MaxValue)
-                            {
-                                ampStep = (short)-ampStep;
-                            }
-                            tempSample += ampStep;
-                            wave[i] += Convert.ToInt16(tempSample / waveCount * o.Volume);
-                        }
-                        break;
-                    case WaveForm.Noise:
-                        for (int i = 0; i < SAMPLE_RATE; i++)
-                        {
-                            wave[i] += Convert.ToInt16(random.Next(-short.MaxValue, short.MaxValue) / waveCount * o.Volume);
-                        }
-                        break;
-                    default:
-                        throw new Exception("Unknown WaveForm supplied.");
-                }
-
-            }
-            return wave;
-        }
-
+        
         /// <summary>
         /// 
         /// </summary>
         /// <param name="binaryWave"></param>
-        private void PlaySound(byte[] binaryWave)
+        private void PlayWave(byte[] binaryWave)
         {
             using MemoryStream stream = new();
             using BinaryWriter writer = new(stream);
-
-            
-            CreateWavStream(writer);
+            var WaveDuration = (binaryWave.Length / 2 / SAMPLE_RATE * 1000);
+            CreateWavStream(writer,WaveDuration);
             writer.Write(binaryWave);
-
             stream.Position = 0;
             player.Stream = stream;
+            player.Play();
+            CreateWavStream(writer, WaveDuration);
+            writer.Write(binaryWave);
+            stream.Position = 0;
+
+            player.Stream = stream;
+            //player.PlaySync();
+        }
+
+        private async Task PlaySound()
+        {
+            short[] wave = Generator.GenerateWave(CurrentOscillations, 0);
+            byte[] binaryWave = new byte[SAMPLE_RATE * sizeof(short)];
+            Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
+            PlayWave(binaryWave);
             player.PlaySync();
-            
         }
 
         /// <summary>
         /// Creates a WAVE format stream, based on documentation found here: http://soundfile.sapp.org/doc/WaveFormat/
         /// </summary>
         /// <param name="writer"></param>
-        private void CreateWavStream(BinaryWriter writer)
+        /// <param name="Length">Length of sample to generate, in milliseconds</param>
+        private static void CreateWavStream(BinaryWriter writer, int Length)
         {
+            double SampleModifierLength = (double)Length / 1000;
+            int subChunkTwoSize = (int)(SAMPLE_RATE * SampleModifierLength * BLOCK_ALIGN);
             //ChunkID
             writer.Write("RIFF".ToCharArray());
             //ChunkSize
-            writer.Write(36 + SUB_CHUNK_TWO_SIZE);
+            writer.Write(36 + subChunkTwoSize);
             //Format
             writer.Write("WAVE".ToCharArray());
             //Subchunk1ID
@@ -150,24 +101,52 @@ namespace SynthesizerProject
             //SubChunk2ID
             writer.Write("data".ToCharArray());
             //SubChunk2Size
-            writer.Write(SUB_CHUNK_TWO_SIZE);
+            writer.Write(subChunkTwoSize);
         }
 
         /// <summary>
-        /// 
+        /// Adds oscillations
         /// </summary>
         /// <param name="frequency"></param>
-        public void GenerateSound(IEnumerable<Oscillation> oscillations)
+        public void AddOscillations(IEnumerable<Oscillation> oscillations)
         {
-            if (CurrentSample == null || !CurrentSample.SequenceEqual(oscillations))
+            if (CurrentOscillations == null || !CurrentOscillations.SequenceEqual(oscillations))
             {
-                CurrentSample = oscillations;
-                short[] wave = null;
-                byte[] binaryWave = new byte[SAMPLE_RATE * sizeof(short)];
-                wave = GenerateWave(oscillations, 0);
-                Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
-                PlaySound(binaryWave);
+                foreach(Oscillation osc in oscillations)
+                {
+                    if (!CurrentOscillations.Contains(osc))
+                    {
+                        CurrentOscillations.Add(osc);
+                    }
+                }
+                if (!Playing)
+                {
+                    Playing = true;
+                    _ = Task.Run(() => PlaySound());
+                }
+                else
+                {
+
+                }
             }
+        }
+
+        /// <summary>
+        /// Removes oscillations 
+        /// </summary>
+        /// <param name="oscillations"></param>
+        public void RemoveOscillations(List<Oscillation> oscillations)
+        {
+            if(oscillations != null)
+            {
+                CurrentOscillations.RemoveAll(o => oscillations.Contains(o));
+            }
+            else
+            {
+                CurrentOscillations.Clear();
+            }
+
+            if (CurrentOscillations.Count == 0) Playing = false;
         }
     }
 }

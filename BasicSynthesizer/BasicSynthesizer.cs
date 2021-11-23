@@ -1,21 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Media;
-using System.IO;
 using SynthesizerProject;
 
 namespace BasicSynthesizerProject
 {
     public partial class BasicSynthesizer : Form
     {
-        private Dictionary<Keys, float> KeyFrequencies = new Dictionary<Keys, float>
+        private Dictionary<Keys, float> KeyFrequencies = new()
         {
             {Keys.Z,65.4f},
             {Keys.X,138.59f},
@@ -25,7 +19,7 @@ namespace BasicSynthesizerProject
             {Keys.N,2093f},
             {Keys.M,4185.01f}
         };
-        private Synthesizer synth;
+        private SynthesizerProject.Synthesizer synth;
         public BasicSynthesizer()
         {
             synth = new Synthesizer()
@@ -48,6 +42,13 @@ namespace BasicSynthesizerProject
                 return;
             }
 
+            List<Oscillation> oscillations = ExtractOscillations(frequency);
+
+            synth.AddOscillations(oscillations);
+        }
+
+        private List<Oscillation> ExtractOscillations(float frequency)
+        {
             List<Oscillation> oscillations = new();
             foreach (Oscillator o in Controls.OfType<Oscillator>().Where(o => o.ON))
             {
@@ -59,15 +60,29 @@ namespace BasicSynthesizerProject
                 });
             }
 
-            synth.GenerateSound(oscillations);
+            return oscillations;
         }
 
+        private void BasicSynthesizer_KeyUp(object sender, KeyEventArgs e)
+        {
+            float frequency;
+            if (KeyFrequencies.ContainsKey(e.KeyCode))
+            {
+                frequency = KeyFrequencies[e.KeyCode];
+            }
+            else
+            {
+                return;
+            }
 
+            var oscillations = ExtractOscillations(frequency);
 
-        
+            synth.RemoveOscillations(oscillations);
+        }
 
-        
-        
-
+        private void BasicSynthesizer_Leave(object sender, EventArgs e)
+        {
+            synth.RemoveOscillations(null);
+        }
     }
 }

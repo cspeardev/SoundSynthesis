@@ -73,6 +73,8 @@ namespace BasicSynthesizerProject
             this.Name = "BasicSynthesizer";
             this.Text = "BasicSynthesizer";
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.BasicSynthesizer_KeyDown);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.BasicSynthesizer_KeyUp);
+            this.Leave += new System.EventHandler(this.BasicSynthesizer_Leave);
             this.ResumeLayout(false);
 
         }

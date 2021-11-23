@@ -21,13 +21,10 @@ namespace SynthesizerProject
             if(Frequency != other.Frequency) return false; 
             return true;
         }
-    }
 
-
-
-
-    public enum WaveForm
-    {
-        Sine, Square, Saw, Triangle, Noise
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Oscillation);
+        }
     }
 }
