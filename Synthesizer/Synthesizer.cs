@@ -49,13 +49,6 @@ namespace SynthesizerProject
             writer.Write(binaryWave);
             stream.Position = 0;
             player.Stream = stream;
-            player.Play();
-            CreateWavStream(writer, WaveDuration);
-            writer.Write(binaryWave);
-            stream.Position = 0;
-
-            player.Stream = stream;
-            //player.PlaySync();
         }
 
         private async Task PlaySound()
@@ -64,7 +57,6 @@ namespace SynthesizerProject
             byte[] binaryWave = new byte[SAMPLE_RATE * sizeof(short)];
             Buffer.BlockCopy(wave, 0, binaryWave, 0, wave.Length * sizeof(short));
             PlayWave(binaryWave);
-            player.PlaySync();
         }
 
         /// <summary>

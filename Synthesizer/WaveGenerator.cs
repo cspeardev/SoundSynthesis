@@ -42,6 +42,7 @@ namespace SynthesizerProject
                         {
                             wave[i] += Convert.ToInt16(short.MaxValue * Math.Sin(Math.PI * 2 * o.Frequency / SampleLength * (i + sineLast)) / waveCount * o.Volume);
                         }
+                        sineLast += SampleLength - 1;
                         break;
                     case WaveForm.Square:
                         for (int i = 0; i < SampleLength; i++)
@@ -84,8 +85,6 @@ namespace SynthesizerProject
                 }
 
             }
-
-            sineLast += SampleLength;
             return wave;
         }
 
