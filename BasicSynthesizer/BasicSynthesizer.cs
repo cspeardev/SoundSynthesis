@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Windows.Forms;
-using SynthesizerProject;
+using WaveGeneration;
 
 namespace BasicSynthesizerProject
 {
@@ -19,7 +19,7 @@ namespace BasicSynthesizerProject
             {Keys.N,2093f},
             {Keys.M,4185.01f}
         };
-        private SynthesizerProject.Synthesizer synth;
+        private Synthesizer synth;
         public BasicSynthesizer()
         {
             synth = new Synthesizer()

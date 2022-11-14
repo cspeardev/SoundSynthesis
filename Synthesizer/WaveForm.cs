@@ -1,7 +1,6 @@
-﻿namespace SynthesizerProject
+﻿namespace WaveGeneration;
+
+public enum WaveForm
 {
-    public enum WaveForm
-    {
-        Sine, Square, Saw, Triangle, Noise
-    }
+    Sine, Square, Saw, Triangle, Noise
 }
