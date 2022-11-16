@@ -45,6 +45,7 @@ namespace BasicSynthesizerProject
             List<Oscillation> oscillations = ExtractOscillations(frequency);
 
             synth.AddOscillations(oscillations);
+            synth.Play();
         }
 
         private List<Oscillation> ExtractOscillations(float frequency)
@@ -78,11 +79,13 @@ namespace BasicSynthesizerProject
             var oscillations = ExtractOscillations(frequency);
 
             synth.RemoveOscillations(oscillations);
+            synth.Stop();
         }
 
         private void BasicSynthesizer_Leave(object sender, EventArgs e)
         {
             synth.RemoveOscillations(null);
+            synth.Stop();
         }
     }
 }
