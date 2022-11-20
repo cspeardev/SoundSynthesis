@@ -5,7 +5,7 @@ namespace WaveGeneration;
 public abstract class SynthesizerState
 {
     public Synthesizer Synthesizer { get; protected set; } = null!;
-    internal CancellationTokenSource source = new CancellationTokenSource();
+    protected static CancellationTokenSource source = new CancellationTokenSource();
     public abstract void Play();
     public abstract void Stop();
     public virtual void AddOscillations(IEnumerable<Oscillation> oscillations)
@@ -39,7 +39,8 @@ public class NotPlayingState : SynthesizerState
     public NotPlayingState(Synthesizer synth) => Synthesizer = synth;
     public override void Play()
     {
-        Synthesizer.SynthesizerState = new GeneratingWaveState(Synthesizer);
+        source = new();
+        Task.Run(() => Synthesizer.SynthesizerState = new GeneratingWaveState(Synthesizer), source.Token);
     }
 
     public override void Stop()
@@ -52,19 +53,19 @@ public class NotPlayingState : SynthesizerState
 public class PlayingState : SynthesizerState
 {
 
-    private SoundPlayer player = new();
-    private CancellationToken playingToken = new();
+    private static SoundPlayer player = new();
     public PlayingState(Synthesizer synth, MemoryStream waveStream)
     {
         Synthesizer = synth;
-        Task.Run(() => playSoundAsync(waveStream),playingToken);
+        playSound(waveStream);
     }
 
-    private void playSoundAsync(MemoryStream waveStream)
+    private void playSound(MemoryStream waveStream)
     {
         player.Stream = waveStream;
-        player.Play();
+        player.PlaySync();
         Synthesizer.SynthesizerState = new GeneratingWaveState(Synthesizer);
+        //Synthesizer.SynthesizerState = new NotPlayingState(Synthesizer);
     }
 
 
@@ -108,6 +109,7 @@ public class GeneratingWaveState : SynthesizerState
     }
     public override void Stop()
     {
+        source.Cancel();
         Synthesizer.SynthesizerState = new NotPlayingState(Synthesizer);
     }
 
