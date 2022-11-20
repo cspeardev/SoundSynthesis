@@ -31,7 +31,6 @@ public abstract class SynthesizerState
         {
             Synthesizer.CurrentOscillations.Clear();
         }
-        if (Synthesizer.CurrentOscillations.Count == 0) Synthesizer.SynthesizerState = new NotPlayingState(Synthesizer);
     }
 }
 
