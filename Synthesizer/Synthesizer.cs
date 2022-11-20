@@ -165,5 +165,5 @@ public class Synthesizer
     public void Stop() => SynthesizerState.Stop();
 
     public void AddOscillations(IEnumerable<Oscillation> oscillations) => SynthesizerState.AddOscillations(oscillations);
-    public void RemoveOscillations(List<Oscillation> oscillations) => SynthesizerState.RemoveOscillations(oscillations);
+    public void RemoveOscillations(IEnumerable<Oscillation> oscillations) => SynthesizerState.RemoveOscillations(oscillations);
 }

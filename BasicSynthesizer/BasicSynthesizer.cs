@@ -84,8 +84,8 @@ namespace BasicSynthesizerProject
 
         private void BasicSynthesizer_Leave(object sender, EventArgs e)
         {
-            synth.RemoveOscillations(null);
-            synth.Stop();
+            //synth.RemoveOscillations(null);
+            //synth.Stop();
         }
     }
 }
